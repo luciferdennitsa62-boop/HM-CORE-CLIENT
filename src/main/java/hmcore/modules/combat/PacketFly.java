@@ -3,23 +3,27 @@ package hmcore.modules.combat;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.player.ChatUtils;
+import meteordevelopment.meteorclient.utils.player.Rotations;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import hmcore.HM_CORE;
+
+import java.util.Random;
 
 public class PacketFly extends Module {
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgBypass = settings.createGroup("Bypass");
     private final SettingGroup sgVisual = settings.createGroup("Visual");
+    private final SettingGroup sgAdvanced = settings.createGroup("Advanced");
 
     // --- ОСНОВНЫЕ НАСТРОЙКИ ---
 
     public final Setting<Mode> mode = sgGeneral.add(new EnumSetting.Builder<Mode>()
             .name("mode")
-            .description("Режим полёта")
+            .description("Режим полета")
             .defaultValue(Mode.Packet)
             .build()
     );
@@ -44,53 +48,56 @@ public class PacketFly extends Module {
             .build()
     );
 
+    public final Setting<Integer> packetCount = sgGeneral.add(new IntSetting.Builder()
+            .name("packet-count")
+            .description("Количество пакетов за тик (чем больше, тем быстрее, но рискованнее)")
+            .defaultValue(3)
+            .min(1)
+            .max(10)
+            .sliderMax(10)
+            .build()
+    );
+
     public final Setting<Boolean> antiKick = sgGeneral.add(new BoolSetting.Builder()
             .name("anti-kick")
-            .description("Предотвращает кик за полёт")
+            .description("Защита от кика за полет")
             .defaultValue(true)
             .build()
     );
 
-    public final Setting<Integer> packetLimit = sgGeneral.add(new IntSetting.Builder()
-            .name("packet-limit")
-            .description("Количество пакетов за тик")
-            .defaultValue(5)
-            .min(1)
-            .max(20)
-            .sliderMax(20)
+    public final Setting<Boolean> glide = sgGeneral.add(new BoolSetting.Builder()
+            .name("glide")
+            .description("Плавное снижение")
+            .defaultValue(false)
             .build()
     );
 
-    // --- ОБХОД ---
+    // --- НАСТРОЙКИ ОБХОДА ---
 
     public final Setting<BypassType> bypass = sgBypass.add(new EnumSetting.Builder<BypassType>()
             .name("bypass")
-            .description("Метод обхода античита")
-            .defaultValue(BypassType.None)
+            .description("Тип обхода античита")
+            .defaultValue(BypassType.Spoof)
             .build()
     );
 
-    public final Setting<Boolean> useFakePosition = sgBypass.add(new BoolSetting.Builder()
-            .name("use-fake-position")
-            .description("Отправлять фейковую позицию перед движением")
-            .defaultValue(true)
+    public final Setting<Integer> spoofOffset = sgBypass.add(new IntSetting.Builder()
+            .name("spoof-offset")
+            .description("Смещение для подделки позиции (в тиках)")
+            .defaultValue(3)
+            .min(1)
+            .max(10)
+            .sliderMax(10)
             .build()
     );
 
-    public final Setting<Double> fakeOffset = sgBypass.add(new DoubleSetting.Builder()
-            .name("fake-offset")
-            .description("Смещение для фейковой позиции")
-            .defaultValue(0.1)
-            .min(0.01)
-            .max(0.5)
-            .sliderMax(0.5)
-            .build()
-    );
-
-    public final Setting<Boolean> antiStuck = sgBypass.add(new BoolSetting.Builder()
-            .name("anti-stuck")
-            .description("Автоматически выходить из блоков")
-            .defaultValue(true)
+    public final Setting<Double> fallDistance = sgBypass.add(new DoubleSetting.Builder()
+            .name("fall-distance")
+            .description("Дистанция падения для обмана античита")
+            .defaultValue(0.01)
+            .min(0.001)
+            .max(1.0)
+            .sliderMax(1.0)
             .build()
     );
 
@@ -103,10 +110,43 @@ public class PacketFly extends Module {
             .build()
     );
 
-    public final Setting<Boolean> trail = sgVisual.add(new BoolSetting.Builder()
-            .name("trail")
-            .description("Оставлять след из частиц")
-            .defaultValue(false)
+    public final Setting<Boolean> notifyToggle = sgVisual.add(new BoolSetting.Builder()
+            .name("notify-toggle")
+            .description("Уведомления о включении/выключении")
+            .defaultValue(true)
+            .build()
+    );
+
+    // --- ПРОДВИНУТЫЕ ---
+
+    public final Setting<Boolean> smartDirection = sgAdvanced.add(new BoolSetting.Builder()
+            .name("smart-direction")
+            .description("Учитывать направление взгляда")
+            .defaultValue(true)
+            .build()
+    );
+
+    public final Setting<Integer> autoDisableTime = sgAdvanced.add(new IntSetting.Builder()
+            .name("auto-disable-time")
+            .description("Автовыключение через X секунд (0 = выкл)")
+            .defaultValue(0)
+            .min(0)
+            .max(300)
+            .sliderMax(300)
+            .build()
+    );
+
+    public final Setting<Boolean> bindJump = sgAdvanced.add(new BoolSetting.Builder()
+            .name("bind-jump")
+            .description("Использовать прыжок для подъема")
+            .defaultValue(true)
+            .build()
+    );
+
+    public final Setting<Boolean> bindSneak = sgAdvanced.add(new BoolSetting.Builder()
+            .name("bind-sneak")
+            .description("Использовать приседание для спуска")
+            .defaultValue(true)
             .build()
     );
 
@@ -114,11 +154,9 @@ public class PacketFly extends Module {
 
     public enum Mode {
         Packet("Пакетный"),
+        Vanilla("Ванильный"),
         Grim("GrimAC"),
-        Vulcan("Vulcan"),
-        Matrix("Matrix"),
-        Vanilla("Ванильный (креатив)"),
-        Custom("Пользовательский");
+        Vulcan("Vulcan");
 
         private final String name;
 
@@ -134,14 +172,16 @@ public class PacketFly extends Module {
 
     public enum BypassType {
         None("Выкл"),
+        Spoof("Подделка позиции"),
         AntiKick("Анти-кик"),
-        PacketSpoof("Подделка пакетов"),
         Full("Полный обход")
     }
 
     // --- ПЕРЕМЕННЫЕ ---
+    private long startTime = 0;
     private int tickCounter = 0;
-    private Vec3d startPos = null;
+    private final Random random = new Random();
+    private boolean isFlying = false;
 
     // --- КОНСТРУКТОР ---
     public PacketFly() {
@@ -151,26 +191,31 @@ public class PacketFly extends Module {
     @Override
     public void onActivate() {
         if (mc.player == null) return;
-        startPos = mc.player.getPos();
+        startTime = System.currentTimeMillis();
         tickCounter = 0;
-        // Для ванильного режима включаем креатив
+        isFlying = false;
+
         if (mode.get() == Mode.Vanilla) {
             mc.player.getAbilities().flying = true;
             mc.player.getAbilities().setFlySpeed(speed.get().floatValue() / 10f);
+        }
+
+        if (notifyToggle.get()) {
+            ChatUtils.info("PacketFly включен. Режим: " + mode.get());
         }
     }
 
     @Override
     public void onDeactivate() {
         if (mc.player == null) return;
-        // Выключаем креатив
+
         mc.player.getAbilities().flying = false;
         mc.player.getAbilities().setFlySpeed(0.05f);
-        // Если в полёте, мягко приземляем
-        if (!mc.player.isOnGround()) {
-            mc.player.setVelocity(0, -0.5, 0);
+        mc.player.setVelocity(0, -0.5, 0);
+
+        if (notifyToggle.get()) {
+            ChatUtils.info("PacketFly выключен.");
         }
-        startPos = null;
     }
 
     // --- ТИК ---
@@ -178,16 +223,14 @@ public class PacketFly extends Module {
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.world == null) return;
 
-        tickCounter++;
-
-        // Анти-кик
-        if (antiKick.get() && tickCounter % 20 == 0) {
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(true));
-        }
-
-        // Anti-stuck
-        if (antiStuck.get() && mc.player.horizontalCollision) {
-            mc.player.setVelocity(mc.player.getVelocity().x, 0.1, mc.player.getVelocity().z);
+        // Автовыключение
+        if (autoDisableTime.get() > 0) {
+            long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+            if (elapsed > autoDisableTime.get()) {
+                toggle();
+                ChatUtils.warn("PacketFly автоматически выключен (таймер)");
+                return;
+            }
         }
 
         // Обработка режимов
@@ -196,142 +239,111 @@ public class PacketFly extends Module {
             case Packet -> handlePacket();
             case Grim -> handleGrim();
             case Vulcan -> handleVulcan();
-            case Matrix -> handleMatrix();
-            case Custom -> handleCustom();
         }
+
+        // Анти-кик
+        if (antiKick.get() && mc.player.age % 20 == 0) {
+            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(true));
+        }
+
+        tickCounter++;
     }
 
     // --- ОБРАБОТЧИКИ ---
 
     private void handleVanilla() {
-        // Креативный полёт
         mc.player.getAbilities().flying = true;
         mc.player.getAbilities().setFlySpeed(speed.get().floatValue() / 10f);
 
-        // Управление
-        Vec3d movement = getMovementVector();
-        if (movement.length() > 0) {
-            mc.player.setVelocity(movement);
+        if (bindJump.get() && mc.options.jumpKey.isPressed()) {
+            mc.player.setVelocity(mc.player.getVelocity().x, verticalSpeed.get(), mc.player.getVelocity().z);
+        }
+        if (bindSneak.get() && mc.options.sneakKey.isPressed()) {
+            mc.player.setVelocity(mc.player.getVelocity().x, -verticalSpeed.get(), mc.player.getVelocity().z);
         }
     }
 
     private void handlePacket() {
-        // Отключаем креатив
         mc.player.getAbilities().flying = false;
 
-        Vec3d movement = getMovementVector();
-        if (movement.length() > 0) {
-            Vec3d newPos = mc.player.getPos().add(movement);
+        Vec3d forward = getMovementVector();
+        if (forward.length() > 0) {
+            Vec3d newPos = mc.player.getPos().add(forward);
 
-            // Фейковая позиция
-            if (useFakePosition.get()) {
-                double fakeY = newPos.y + fakeOffset.get();
+            // Отправляем пакеты
+            for (int i = 0; i < packetCount.get(); i++) {
+                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
+                        newPos.x, newPos.y, newPos.z, false
+                ));
+            }
+
+            // Подделка позиции (обход)
+            if (bypass.get() == BypassType.Spoof) {
+                double fakeY = newPos.y + fallDistance.get() * random.nextDouble();
                 mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
                         newPos.x, fakeY, newPos.z, false
                 ));
             }
 
-            // Отправка пакетов
-            for (int i = 0; i < packetLimit.get(); i++) {
-                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
-                        newPos.x, newPos.y, newPos.z, false
-                ));
-            }
             mc.player.setPosition(newPos);
-        }
-
-        // Если не двигаемся, отправляем "на земле"
-        if (movement.length() == 0 && bypass.get() != BypassType.None) {
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(true));
+            isFlying = true;
+        } else {
+            if (bypass.get() != BypassType.None) {
+                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(true));
+            }
+            isFlying = false;
         }
     }
 
     private void handleGrim() {
-        // GrimAC требует маленьких смещений
         mc.player.getAbilities().flying = false;
 
-        Vec3d movement = getMovementVector();
-        if (movement.length() > 0) {
-            Vec3d newPos = mc.player.getPos().add(movement.multiply(0.8));
+        Vec3d forward = getMovementVector();
+        if (forward.length() > 0) {
+            Vec3d newPos = mc.player.getPos().add(forward.multiply(0.7));
 
-            // Маленький подъём
+            // Grim требует специфических значений
+            double offset = 0.001091981 + random.nextDouble() * 0.0001;
             mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
-                    mc.player.getX(), mc.player.getY() + 0.001, mc.player.getZ(), false
+                    newPos.x, newPos.y + offset, newPos.z, false
             ));
 
-            // Движение
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
-                    newPos.x, newPos.y, newPos.z, false
-            ));
             mc.player.setPosition(newPos);
+        }
 
-            // Возврат на землю
+        if (mc.player.age % 5 == 0) {
             mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(true));
         }
 
-        // Периодически сбрасываем
-        if (tickCounter % 10 == 0) {
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(true));
+        if (glide.get()) {
+            mc.player.setVelocity(mc.player.getVelocity().x, -0.01, mc.player.getVelocity().z);
         }
     }
 
     private void handleVulcan() {
-        // Vulcan: креатив + пакеты
         mc.player.getAbilities().flying = true;
         mc.player.getAbilities().setFlySpeed(0.05f);
 
-        // Отправляем маленькие смещения
-        if (tickCounter % 2 == 0) {
+        // Vulcan требует постоянной отправки пакетов "на земле"
+        if (mc.player.age % 2 == 0) {
             mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
                     mc.player.getX(), mc.player.getY() - 0.0001, mc.player.getZ(), true
             ));
         }
 
-        // Управление через скорость
-        Vec3d movement = getMovementVector();
-        if (movement.length() > 0) {
-            mc.player.setVelocity(movement);
+        if (bindJump.get() && mc.options.jumpKey.isPressed()) {
+            mc.player.setVelocity(mc.player.getVelocity().x, verticalSpeed.get() / 2, mc.player.getVelocity().z);
         }
-    }
-
-    private void handleMatrix() {
-        // Matrix: ограничиваем количество пакетов
-        mc.player.getAbilities().flying = false;
-
-        Vec3d movement = getMovementVector();
-        if (movement.length() > 0) {
-            Vec3d newPos = mc.player.getPos().add(movement);
-            int limit = Math.min(packetLimit.get(), 5);
-            for (int i = 0; i < limit; i++) {
-                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
-                        newPos.x, newPos.y, newPos.z, false
-                ));
-            }
-            mc.player.setPosition(newPos);
-        }
-    }
-
-    private void handleCustom() {
-        // Пользовательский — комбинируем
-        mc.player.getAbilities().flying = false;
-        Vec3d movement = getMovementVector();
-        if (movement.length() > 0) {
-            Vec3d newPos = mc.player.getPos().add(movement);
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
-                    newPos.x, newPos.y, newPos.z, false
-            ));
-            mc.player.setPosition(newPos);
+        if (bindSneak.get() && mc.options.sneakKey.isPressed()) {
+            mc.player.setVelocity(mc.player.getVelocity().x, -verticalSpeed.get() / 2, mc.player.getVelocity().z);
         }
     }
 
     // --- ПОЛУЧЕНИЕ ВЕКТОРА ДВИЖЕНИЯ ---
     private Vec3d getMovementVector() {
-        if (mc.player == null) return Vec3d.ZERO;
-
+        Vec3d forward = new Vec3d(0, 0, 0);
         double speedFactor = speed.get() / 10;
-        Vec3d forward = Vec3d.ZERO;
 
-        // Горизонталь
         if (mc.options.forwardKey.isPressed()) {
             forward = forward.add(mc.player.getRotationVector().multiply(speedFactor));
         }
@@ -345,20 +357,22 @@ public class PacketFly extends Module {
             forward = forward.add(mc.player.getRotationVector().rotateY((float) Math.toRadians(90)).multiply(speedFactor));
         }
 
-        // Вертикаль
-        if (mc.options.jumpKey.isPressed()) {
+        if (bindJump.get() && mc.options.jumpKey.isPressed()) {
             forward = forward.add(0, verticalSpeed.get() / 10, 0);
         }
-        if (mc.options.sneakKey.isPressed()) {
+        if (bindSneak.get() && mc.options.sneakKey.isPressed()) {
             forward = forward.add(0, -verticalSpeed.get() / 10, 0);
         }
 
         return forward;
     }
 
-    // --- ИНФОРМАЦИЯ ДЛЯ HUD ---
     @Override
     public String getInfoString() {
-        return mode.get().toString() + " " + String.format("%.1f", speed.get());
+        if (isFlying) {
+            return "§a" + String.format("%.1f", speed.get()) + " блок/с";
+        } else {
+            return "§7Ожидание";
+        }
     }
 }
