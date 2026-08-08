@@ -5,7 +5,7 @@ import meteordevelopment.meteorclient.systems.commands.Commands;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.systems.modules.Category;
 
-// --- ВСЕ МОДУЛИ COMBAT ---
+// --- COMBAT МОДУЛИ ---
 import hmcore.modules.combat.MaceDMG;
 import hmcore.modules.combat.AutoCrit;
 import hmcore.modules.combat.AutoCrystal;
@@ -40,7 +40,7 @@ import hmcore.modules.combat.BaseFinder;
 import hmcore.modules.combat.OPCrack;
 import hmcore.modules.combat.AdaptiveBypass;
 
-// --- ВСЕ МОДУЛИ VISUALS ---
+// --- VISUALS МОДУЛИ ---
 import hmcore.modules.visuals.TrailEffect;
 import hmcore.modules.visuals.RedBlackTheme;
 import hmcore.modules.visuals.LSDMode;
@@ -61,53 +61,34 @@ public class HM_CORE extends MeteorAddon {
         //  COMBAT (БОЕВЫЕ МОДУЛИ)
         // ============================================================
 
-        // --- ОСНОВНЫЕ ---
         Modules.get().add(new MaceDMG());
         Modules.get().add(new AutoCrit());
         Modules.get().add(new AutoCrystal());
         Modules.get().add(new Surround());
-
-        // --- ЗАЩИТА ---
         Modules.get().add(new SelfTrap());
         Modules.get().add(new Burrow());
         Modules.get().add(new AutoTrap());
-        Modules.get().add(new AnchorAura());
-
-        // --- АВТО-БОЙ ---
         Modules.get().add(new SilentAura());
         Modules.get().add(new FightBot());
-
-        // --- ДВИЖЕНИЕ ---
+        Modules.get().add(new AnchorAura());
         Modules.get().add(new SmartFly());
         Modules.get().add(new PacketFly());
         Modules.get().add(new BlinkTP());
         Modules.get().add(new ServerSideClickTP());
-        Modules.get().add(new MegaJump());
-        Modules.get().add(new EntitySpeed());
-
-        // --- ОРУЖИЕ И УРОН ---
         Modules.get().add(new Reach());
         Modules.get().add(new DamageStack());
         Modules.get().add(new WeaponManager());
-
-        // --- ЗАЩИТА ОТ ПАДЕНИЯ И АНТИЧИТОВ ---
         Modules.get().add(new NoFallPlus());
         Modules.get().add(new Disabler());
         Modules.get().add(new GodMode());
-
-        // --- ЗАЩИТА ОТ ВОЙДА, ЗЕЛИЙ, КНИГ ---
+        Modules.get().add(new MegaJump());
         Modules.get().add(new AntiVoid());
         Modules.get().add(new AntiPotion());
         Modules.get().add(new AntiBookBan());
-
-        // --- МАСКИРОВКА И ПОДДЕЛКА ---
         Modules.get().add(new NameProtect());
         Modules.get().add(new PingSpoof());
-
-        // --- ОТКЛЮЧЕНИЕ РЕНДЕРИНГА ---
+        Modules.get().add(new EntitySpeed());
         Modules.get().add(new NoRender());
-
-        // --- ДОПОЛНИТЕЛЬНЫЕ ---
         Modules.get().add(new Animations());
         Modules.get().add(new MacroHub());
         Modules.get().add(new BaseFinder());
@@ -130,7 +111,6 @@ public class HM_CORE extends MeteorAddon {
         Commands.get().add(new ToggleCommand());
 
         info("HM-CORE-CLIENT успешно загружен! Все модули зарегистрированы.");
-        info("§7Всего модулей: " + Modules.get().getAll().size());
     }
 
     @Override
