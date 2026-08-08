@@ -6,7 +6,7 @@ fabric-loader = "0.19.3"
 fabric-api = "0.141.6+1.21.11"
 
 # Plugins
-loom = "1.16.0"   # ← Исправлено! (было 1.17.2)
+loom = "1.17-SNAPSHOT"   # ← Вернули SNAPSHOT
 
 # Mods
 baritone = "26.1-SNAPSHOT"
