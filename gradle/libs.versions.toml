@@ -1,13 +1,13 @@
 [versions]
 # Fabric (https://fabricmc.net/develop)
 jdk = "25"
-minecraft = "26.1.2"
-fabric-loader = "0.19.2"
-fabric-api = "0.146.1+26.1.2"
+minecraft = "1.21.11"
+fabric-loader = "0.19.3"
+fabric-api = "0.141.6+1.21.11"
 
 # Plugins
 # Loom (https://github.com/FabricMC/fabric-loom)
-loom = "1.16-SNAPSHOT"
+loom = "1.17-SNAPSHOT"
 
 # Mods
 # Baritone (https://github.com/MeteorDevelopment/baritone)
