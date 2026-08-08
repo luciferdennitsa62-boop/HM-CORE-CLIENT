@@ -1,9 +1,9 @@
 [versions]
 # Fabric (https://fabricmc.net/develop)
-minecraft = "1.21.11"
+minecraft = "1.21.1"
 yarn-mappings = "1.21.11+build.3"
 fabric-loader = "0.18.2"
-fabric-api = "0.140.0+1.21.11"
+fabric-api = "0.96.0+1.21.1"
 
 # Plugins
 # Loom (https://github.com/FabricMC/fabric-loom)
